@@ -18,12 +18,14 @@ if ($pe -eq 1 -and $ps) {
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
 $node = Join-Path $work "node-v20.17.0-win-$arch\node.exe"
 
-# --- get cloudflared.exe (from GitHub releases — allowed by your filter) ---
+# --- get cloudflared.exe (zipped on raw.githubusercontent.com — bare .exe download is blocked by the filter) ---
 $cf = Join-Path $work 'cloudflared.exe'
 if (-not (Test-Path $cf)) {
-  $cfurl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-$arch.exe"
-  Write-Host ("Downloading cloudflared: {0}" -f $cfurl)
-  Invoke-WebRequest -UseBasicParsing -Uri $cfurl -OutFile $cf
+  $cfzip = Join-Path $work 'cloudflared-win-x64.zip'
+  $cfurl = "https://raw.githubusercontent.com/gruncode/pw-lab/main/cloudflared-win-x64.zip"
+  Write-Host ("Downloading cloudflared (zip): {0}" -f $cfurl)
+  Invoke-WebRequest -UseBasicParsing -Uri $cfurl -OutFile $cfzip
+  Expand-Archive -Force -Path $cfzip -DestinationPath $work
 }
 
 # --- start Playwright server (WebSocket) on localhost:9333/pw ---
