@@ -1,44 +1,46 @@
-# pw/probe.ps1 — what does this network actually allow? (PowerShell only, no exe)
+# pw/probe.ps1 — what does this network allow? Sends results back to George via ntfy (no screenshot needed).
 # Run on the laptop:  irm https://raw.githubusercontent.com/gruncode/pw-lab/main/probe.ps1 | iex
 $ErrorActionPreference = 'SilentlyContinue'
+$NTFY = 'https://ntfy.sh/pwlab-08ca16c2'   # George reads this channel
+$out = New-Object System.Collections.ArrayList
+function Say($m){ [void]$out.Add($m); Write-Host $m }
 
 # mirror what cloudflared/irm will use: system proxy
 $ieKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
 $pe = (Get-ItemProperty $ieKey).ProxyEnable
 $ps = (Get-ItemProperty $ieKey).ProxyServer
-if ($pe -eq 1 -and $ps) {
-  Write-Host ("PROXY: {0}" -f $ps) -ForegroundColor Yellow
-  $env:HTTP_PROXY = "http://$ps"; $env:HTTPS_PROXY = "http://$ps"
-} else {
-  Write-Host "PROXY: none (direct)" -ForegroundColor Yellow
-}
-Write-Host "REACHED = domain allowed (even an HTTP error code means it got through). BLOCKED = filter dropped it." -ForegroundColor Cyan
-Write-Host ("-" * 60)
+if ($pe -eq 1 -and $ps) { $env:HTTP_PROXY = "http://$ps"; $env:HTTPS_PROXY = "http://$ps"; Say ("PROXY: {0}" -f $ps) }
+else { Say "PROXY: none (direct)" }
+Say ("arch={0}" -f $env:PROCESSOR_ARCHITECTURE)
 
 $targets = @(
-  'raw.githubusercontent.com',     # control: known GOOD
-  'api.trycloudflare.com',         # control: known BAD
+  'raw.githubusercontent.com',     # control GOOD
+  'api.trycloudflare.com',         # control BAD
   'api.cloudflare.com',            # named-tunnel registration
   'update.argotunnel.com',         # cloudflared edge
   'region1.v2.argotunnel.com',     # cloudflared edge region
   'huggingface.co',                # HF Spaces option
   'tunnel.us.ngrok.com',           # ngrok option
-  'www.google.com'                 # generic
+  'ntfy.sh',                       # this reply channel
+  'www.google.com'
 )
-
 foreach ($t in $targets) {
   $sw = [Diagnostics.Stopwatch]::StartNew()
   try {
     $r = Invoke-WebRequest -UseBasicParsing -Uri ("https://{0}/" -f $t) -Method Head -TimeoutSec 8
-    "{0,-30} REACHED  HTTP {1}  {2}ms" -f $t, $r.StatusCode, $sw.ElapsedMilliseconds
+    Say ("{0,-30} REACHED  HTTP {1}  {2}ms" -f $t, $r.StatusCode, $sw.ElapsedMilliseconds)
   } catch {
     $code = $_.Exception.Response.StatusCode.value__
-    if ($code) {
-      "{0,-30} REACHED  HTTP {1}  {2}ms" -f $t, $code, $sw.ElapsedMilliseconds
-    } else {
-      "{0,-30} BLOCKED  ({1})" -f $t, ($_.Exception.Message -split "`n")[0].Trim()
-    }
+    if ($code) { Say ("{0,-30} REACHED  HTTP {1}  {2}ms" -f $t, $code, $sw.ElapsedMilliseconds) }
+    else { Say ("{0,-30} BLOCKED  ({1})" -f $t, ($_.Exception.Message -split "`n")[0].Trim()) }
   }
 }
-Write-Host ("-" * 60)
-Write-Host "Send this whole list to George." -ForegroundColor Green
+
+# --- send results back to George (so no screenshot is needed) ---
+$body = ($out -join "`n")
+try {
+  Invoke-WebRequest -UseBasicParsing -Uri $NTFY -Method Post -Body $body -TimeoutSec 12 | Out-Null
+  Write-Host "`n>> Results sent to George." -ForegroundColor Green
+} catch {
+  Write-Host "`n>> Could not reach ntfy (it may be blocked) -- screenshot this instead." -ForegroundColor Yellow
+}
