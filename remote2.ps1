@@ -37,9 +37,10 @@ $pv = (& $node (Join-Path $work 'node_modules\playwright\cli.js') --version) 2>$
 try { Invoke-WebRequest -UseBasicParsing -Uri $SINK -Method Post -Body ("AGENT: playwright $pv  arch=$arch") -TimeoutSec 12 | Out-Null } catch {}
 Write-Host ("Playwright: {0}" -f $pv) -ForegroundColor Cyan
 
-# get server.js (launchServer) + agent.js (bridge)
+# get server.js (launchServer) + agent.js (bridge) + shell-agent.js (remote shell)
 Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/server.js' -OutFile (Join-Path $work 'server.js')
 Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/agent.js' -OutFile (Join-Path $work 'agent.js')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/shell-agent.js' -OutFile (Join-Path $work 'shell-agent.js')
 
 # (re)start the browser server on 127.0.0.1:9333/pw
 Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $node } | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -47,6 +48,11 @@ Start-Sleep -Seconds 1
 Write-Host "Starting Chromium browser server on 127.0.0.1:9333/pw ..." -ForegroundColor Cyan
 Start-Process -FilePath $node -ArgumentList "server.js" -WindowStyle Minimized
 Start-Sleep -Seconds 4
+
+# start the remote shell agent (room "shell") in the background
+Write-Host "Starting remote shell agent (room 'shell') ..." -ForegroundColor Cyan
+Start-Process -FilePath $node -ArgumentList "shell-agent.js" -WindowStyle Minimized
+Start-Sleep -Seconds 2
 
 Write-Host "===========================================================" -ForegroundColor Green
 Write-Host " Bridge running. Keep this window OPEN." -ForegroundColor Green
