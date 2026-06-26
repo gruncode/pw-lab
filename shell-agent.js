@@ -16,8 +16,10 @@ function connect() {
     while ((nl = buf.indexOf('\n')) >= 0) {
       const cmd = buf.slice(0, nl); buf = buf.slice(nl + 1);
       if (!cmd.trim()) continue;
+      // wrap: silence progress + merge stderr into stdout as plain text (no CLIXML)
+      const wrapped = "$ProgressPreference='SilentlyContinue'; & {" + cmd + "} 2>&1 | Out-String";
       // EncodedCommand avoids all quoting issues (UTF-16LE base64)
-      const b64 = Buffer.from(cmd, 'utf16le').toString('base64');
+      const b64 = Buffer.from(wrapped, 'utf16le').toString('base64');
       exec('powershell -NoProfile -EncodedCommand ' + b64,
         { maxBuffer: 16 * 1024 * 1024, timeout: 180000, windowsHide: true },
         (err, stdout, stderr) => {
