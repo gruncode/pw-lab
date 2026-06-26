@@ -28,17 +28,16 @@ $pv = (& $node (Join-Path $work 'node_modules\playwright\cli.js') --version) 2>$
 try { Invoke-WebRequest -UseBasicParsing -Uri $SINK -Method Post -Body ("AGENT: playwright $pv  arch=$arch") -TimeoutSec 12 | Out-Null } catch {}
 Write-Host ("Playwright: {0}" -f $pv) -ForegroundColor Cyan
 
-# (re)start run-server on 127.0.0.1:9333/pw
+# get server.js (launchServer) + agent.js (bridge)
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/server.js' -OutFile (Join-Path $work 'server.js')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/agent.js' -OutFile (Join-Path $work 'agent.js')
+
+# (re)start the browser server on 127.0.0.1:9333/pw
 Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $node } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
-Write-Host "Starting Playwright run-server on 127.0.0.1:9333/pw ..." -ForegroundColor Cyan
-Start-Process -FilePath $node `
-  -ArgumentList "node_modules\playwright\cli.js","run-server","--port","9333","--host","127.0.0.1","--path","/pw" `
-  -WindowStyle Minimized
-Start-Sleep -Seconds 3
-
-# get the bridge agent
-Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/agent.js' -OutFile (Join-Path $work 'agent.js')
+Write-Host "Starting Chromium browser server on 127.0.0.1:9333/pw ..." -ForegroundColor Cyan
+Start-Process -FilePath $node -ArgumentList "server.js" -WindowStyle Minimized
+Start-Sleep -Seconds 4
 
 Write-Host "===========================================================" -ForegroundColor Green
 Write-Host " Bridge running. Keep this window OPEN." -ForegroundColor Green
