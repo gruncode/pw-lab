@@ -1,0 +1,47 @@
+# pw/remote2.ps1 — start Playwright run-server + bridge it to George via the HF relay (hf.space).
+# Run on the laptop AFTER setup.ps1:  irm https://raw.githubusercontent.com/gruncode/pw-lab/main/remote2.ps1 | iex
+$ErrorActionPreference = 'Stop'
+$SINK = 'https://tskuk-pwrelay.hf.space/up'
+$work = Join-Path $env:TEMP 'pwlab'
+if (-not (Test-Path $work)) { Write-Host "Run setup.ps1 first." -ForegroundColor Red; return }
+Set-Location $work
+
+# proxy (none expected, but mirror anyway)
+$ieKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+$pe = (Get-ItemProperty $ieKey -ErrorAction SilentlyContinue).ProxyEnable
+$ps = (Get-ItemProperty $ieKey -ErrorAction SilentlyContinue).ProxyServer
+if ($pe -eq 1 -and $ps) { $env:HTTP_PROXY = "http://$ps"; $env:HTTPS_PROXY = "http://$ps" }
+
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+$nodeDir = Join-Path $work "node-v20.17.0-win-$arch"
+$node = Join-Path $nodeDir 'node.exe'
+$npm  = Join-Path $nodeDir 'npm.cmd'
+$env:Path = "$nodeDir;" + $env:Path
+
+# need the 'ws' package for the bridge
+if (-not (Test-Path (Join-Path $work 'node_modules\ws'))) {
+  Write-Host "Installing ws..."; & $npm i ws --no-fund --no-audit
+}
+
+# report playwright version so George can match it on his side
+$pv = (& $node (Join-Path $work 'node_modules\playwright\cli.js') --version) 2>$null
+try { Invoke-WebRequest -UseBasicParsing -Uri $SINK -Method Post -Body ("AGENT: playwright $pv  arch=$arch") -TimeoutSec 12 | Out-Null } catch {}
+Write-Host ("Playwright: {0}" -f $pv) -ForegroundColor Cyan
+
+# (re)start run-server on 127.0.0.1:9333/pw
+Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $node } | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+Write-Host "Starting Playwright run-server on 127.0.0.1:9333/pw ..." -ForegroundColor Cyan
+Start-Process -FilePath $node `
+  -ArgumentList "node_modules\playwright\cli.js","run-server","--port","9333","--host","127.0.0.1","--path","/pw" `
+  -WindowStyle Minimized
+Start-Sleep -Seconds 3
+
+# get the bridge agent
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/agent.js' -OutFile (Join-Path $work 'agent.js')
+
+Write-Host "===========================================================" -ForegroundColor Green
+Write-Host " Bridge running. Keep this window OPEN." -ForegroundColor Green
+Write-Host " George connects from d7070 to wss://tskuk-pwrelay.hf.space/ws" -ForegroundColor Green
+Write-Host "===========================================================" -ForegroundColor Green
+& $node (Join-Path $work 'agent.js')
