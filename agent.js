@@ -21,6 +21,12 @@ function connect() {
 
   up.on('open', () => log('connected to relay; waiting for controller (d7070)'));
   up.on('message', (d, b) => {
+    // relay control messages (text) — open a fresh local session per controller connect
+    if (!b) {
+      const s = d.toString();
+      if (s === '__OPEN__') { log('controller connected -> opening run-server session'); if (local) { try { local.close(); } catch (e) {} local = null; } q.length = 0; ensureLocal(); return; }
+      if (s === '__CLOSE__') { log('controller disconnected -> closing session'); if (local) { try { local.close(); } catch (e) {} local = null; } return; }
+    }
     ensureLocal();
     if (local && local.readyState === 1) local.send(d, { binary: b });
     else q.push([d, b]);
