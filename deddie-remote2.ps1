@@ -1,5 +1,5 @@
 # pw/remote2.ps1 — start Playwright run-server + bridge it to George via the HF relay (hf.space).
-# Run on the laptop AFTER setup.ps1:  irm https://raw.githubusercontent.com/gruncode/pw-lab/main/remote2.ps1 | iex
+# Run on the laptop AFTER setup.ps1:  irm https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-remote2.ps1 | iex
 $ErrorActionPreference = 'Stop'
 $SINK = 'https://tskuk-pwrelay.hf.space/up'
 $work = Join-Path $env:TEMP 'pwlab'
@@ -10,7 +10,7 @@ Set-Location $work
 # save a private local launcher (token stays only on this PC) for easy future runs
 $startFile = Join-Path $env:USERPROFILE 'pw-start.ps1'
 if (-not (Test-Path $startFile)) {
-  ("`$env:PWTOKEN = '" + $env:PWTOKEN + "'`r`nirm https://raw.githubusercontent.com/gruncode/pw-lab/main/remote2.ps1 | iex") | Out-File -Encoding ascii $startFile
+  ("`$env:PWTOKEN = '" + $env:PWTOKEN + "'`r`nirm https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-remote2.ps1 | iex") | Out-File -Encoding ascii $startFile
   Write-Host ("Saved local launcher: {0}" -f $startFile) -ForegroundColor Green
   Write-Host ("Next time just run:  gc `"{0}`" -Raw | iex" -f $startFile) -ForegroundColor Green
 }
@@ -38,9 +38,9 @@ try { Invoke-WebRequest -UseBasicParsing -Uri $SINK -Method Post -Body ("AGENT: 
 Write-Host ("Playwright: {0}" -f $pv) -ForegroundColor Cyan
 
 # get server.js (launchServer) + agent.js (bridge) + shell-agent.js (remote shell)
-Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/server.js' -OutFile (Join-Path $work 'server.js')
-Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/agent.js' -OutFile (Join-Path $work 'agent.js')
-Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/shell-agent.js' -OutFile (Join-Path $work 'shell-agent.js')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-server.js' -OutFile (Join-Path $work 'server.js')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-agent.js' -OutFile (Join-Path $work 'agent.js')
+Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-shell-agent.js' -OutFile (Join-Path $work 'shell-agent.js')
 
 # (re)start the browser server on 127.0.0.1:9333/pw
 Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $node } | Stop-Process -Force -ErrorAction SilentlyContinue
