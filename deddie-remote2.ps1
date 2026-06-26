@@ -7,13 +7,12 @@ if (-not (Test-Path $work)) { Write-Host "Run setup.ps1 first." -ForegroundColor
 if (-not $env:PWTOKEN) { Write-Host "Set the token first:  `$env:PWTOKEN='...'  then re-run." -ForegroundColor Red; return }
 Set-Location $work
 
-# save a private local launcher (token stays only on this PC) for easy future runs
-$startFile = Join-Path $env:USERPROFILE 'pw-start.ps1'
-if (-not (Test-Path $startFile)) {
-  ("`$env:PWTOKEN = '" + $env:PWTOKEN + "'`r`nirm https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-remote2.ps1 | iex") | Out-File -Encoding ascii $startFile
-  Write-Host ("Saved local launcher: {0}" -f $startFile) -ForegroundColor Green
-  Write-Host ("Next time just run:  gc `"{0}`" -Raw | iex" -f $startFile) -ForegroundColor Green
-}
+# save/refresh a private local launcher (token stays only on this PC) for easy future runs
+$startFile = Join-Path $env:USERPROFILE 'deddie-start.ps1'
+Remove-Item (Join-Path $env:USERPROFILE 'pw-start.ps1') -ErrorAction SilentlyContinue   # retire old name
+("`$env:PWTOKEN = '" + $env:PWTOKEN + "'`r`nirm https://raw.githubusercontent.com/gruncode/pw-lab/main/deddie-remote2.ps1 | iex") | Out-File -Encoding ascii $startFile
+Write-Host ("Saved local launcher: {0}" -f $startFile) -ForegroundColor Green
+Write-Host ("Next time just run:  gc `"{0}`" -Raw | iex" -f $startFile) -ForegroundColor Green
 
 # proxy (none expected, but mirror anyway)
 $ieKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
