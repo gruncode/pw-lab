@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $SINK = 'https://tskuk-pwrelay.hf.space/up'
 $work = Join-Path $env:TEMP 'pwlab'
 if (-not (Test-Path $work)) { Write-Host "Run setup.ps1 first." -ForegroundColor Red; return }
+if (-not $env:PWTOKEN) { Write-Host "Set the token first:  `$env:PWTOKEN='...'  then re-run." -ForegroundColor Red; return }
 Set-Location $work
 
 # proxy (none expected, but mirror anyway)

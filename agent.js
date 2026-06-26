@@ -5,8 +5,9 @@ const RELAY = process.env.RELAY || 'wss://tskuk-pwrelay.hf.space/agent';
 const LOCAL = process.env.LOCAL || 'ws://127.0.0.1:9333/pw';
 const log = (m) => console.log(new Date().toISOString(), m);
 
+const TOKEN = process.env.PWTOKEN || '';
 function connect() {
-  const up = new WebSocket(RELAY);
+  const up = new WebSocket(RELAY, { headers: { 'x-pw-token': TOKEN } });
   let local = null;
   const q = [];
 
