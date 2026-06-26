@@ -1,7 +1,7 @@
 # pw/probe.ps1 — what does this network allow? Sends results back to George via ntfy (no screenshot needed).
 # Run on the laptop:  irm https://raw.githubusercontent.com/gruncode/pw-lab/main/probe.ps1 | iex
 $ErrorActionPreference = 'SilentlyContinue'
-$NTFY = 'https://ntfy.sh/pwlab-08ca16c2'   # George reads this channel
+$SINK = 'https://tskuk-pwrelay.hf.space/up'   # George reads this channel
 $out = New-Object System.Collections.ArrayList
 function Say($m){ [void]$out.Add($m); Write-Host $m }
 
@@ -21,7 +21,7 @@ $targets = @(
   'region1.v2.argotunnel.com',     # cloudflared edge region
   'huggingface.co',                # HF Spaces option
   'tunnel.us.ngrok.com',           # ngrok option
-  'ntfy.sh',                       # this reply channel
+  'tskuk-pwrelay.hf.space',        # HF Space (transport + reply channel candidate)
   'www.google.com'
 )
 foreach ($t in $targets) {
@@ -39,8 +39,8 @@ foreach ($t in $targets) {
 # --- send results back to George (so no screenshot is needed) ---
 $body = ($out -join "`n")
 try {
-  Invoke-WebRequest -UseBasicParsing -Uri $NTFY -Method Post -Body $body -TimeoutSec 12 | Out-Null
-  Write-Host "`n>> Results sent to George." -ForegroundColor Green
+  Invoke-WebRequest -UseBasicParsing -Uri $SINK -Method Post -Body $body -TimeoutSec 15 | Out-Null
+  Write-Host "`n>> Results sent to George (via HF Space)." -ForegroundColor Green
 } catch {
-  Write-Host "`n>> Could not reach ntfy (it may be blocked) -- screenshot this instead." -ForegroundColor Yellow
+  Write-Host "`n>> Could not reach HF Space (it may be blocked) -- screenshot this instead." -ForegroundColor Yellow
 }
